@@ -2,19 +2,22 @@ import React, { FormEvent, useState } from 'react';
 import { FiChevronRight } from 'react-icons/fi';
 import logoImg from '../../assets/github-explorer-logo.svg';
 import { api } from '../../services/api';
-import { Form, Repositories, Title } from './styles';
+import { Error, Form, Repositories, Title } from './styles';
 
 interface Repository {
+  // eslint-disable-next-line camelcase
   full_name: string;
   description: string;
   owner: {
     login: string;
+    // eslint-disable-next-line camelcase
     avatar_url: string;
   };
 }
 
 const Dashboard: React.FC = () => {
   const [searchTerms, setSearchTerms] = useState('');
+  const [inputError, setInputError] = useState('');
   const [repositories, setRepositories] = useState<Repository[]>([]);
 
   async function handleAddRepository(
@@ -22,12 +25,21 @@ const Dashboard: React.FC = () => {
   ): Promise<void> {
     event.preventDefault();
 
-    const response = await api.get<Repository>(`repos/${searchTerms}`);
+    if (!searchTerms) {
+      setInputError('Digite autor/nome do repositório');
+      return;
+    }
 
-    const repository = response.data;
+    try {
+      const response = await api.get<Repository>(`repos/${searchTerms}`);
+      const repository = response.data;
 
-    setRepositories([...repositories, repository]);
-    setSearchTerms('');
+      setRepositories([...repositories, repository]);
+      setSearchTerms('');
+      setInputError('');
+    } catch (error) {
+      setInputError('Erro na busca do repositório');
+    }
   }
 
   return (
@@ -35,7 +47,7 @@ const Dashboard: React.FC = () => {
       <img src={logoImg} alt="GitHub Explorer" />
       <Title>Explore repositórios no GitHub</Title>
 
-      <Form onSubmit={handleAddRepository}>
+      <Form hasError={!!inputError} onSubmit={handleAddRepository}>
         <input
           value={searchTerms}
           onChange={event => setSearchTerms(event.target.value)}
@@ -43,6 +55,8 @@ const Dashboard: React.FC = () => {
         />
         <button type="submit">Pesquisar</button>
       </Form>
+
+      {inputError && <Error>{inputError}</Error>}
 
       <Repositories>
         {repositories.map(repository => (
